@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resume Preview - {{ filename }}</title>
+  <style>
+    :root {
+      --bg: #f4faff;
+      --text: #2c3e50;
+      --card: #ffffff;
+      --primary: #3498db;
+      --primary-dark: #2980b9;
+      --border: #dfe6e9;
+      --pill-bg: #e0f2ff;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #f0f0f0;
+      --card: #1f1f1f;
+      --primary: #4aa3ff;
+      --primary-dark: #2d7fc3;
+      --border: #444;
+      --pill-bg: #2d7fc3;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background-color: var(--card);
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    h3 {
+      margin-bottom: 5px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    p {
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: #eef6fb;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #34495e;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: var(--primary);
+      color: white;
+      text-decoration: none;
+      padding: 12px 22px;
+      border-radius: 6px;
+      font-size: 16px;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      font-weight: bold;
+      text-decoration: none;
+      color: var(--primary);
+    }
+
+    .back-link:hover {
+      color: var(--primary-dark);
+    }
+
+    .copy-btn {
+      padding: 6px 12px;
+      margin-left: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      background-color: var(--primary-dark);
+      color: white;
+      border-radius: 4px;
+    }
+
+    .skills-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      background-color: var(--pill-bg);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .dark-toggle {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+
+      .button {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 🌙 Dark Mode Toggle -->
+  <div class="dark-toggle">
+    <label>Dark Mode</label>
+    <label class="switch">
+      <input type="checkbox" id="darkModeToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="container">
+    <h1>📄 Resume Preview</h1>
+
+    <h3>📁 Filename:</h3>
+    <p>{{ filename }}</p>
+
+    <h3>📧 Email:</h3>
+    <p>{{ email }}</p>
+
+    <h3>📞 Phone:</h3>
+    <p>{{ phone }}</p>
+
+    <h3>🏆 Experience Level:</h3>
+    <p>{{ experience_level }}</p>
+
+    <h3>🛠 Skills:</h3>
+    <div class="skills-pills" id="skillsText">
+      {% for skill in skills %}
+        <span class="pill">{{ skill }}</span>
+      {% endfor %}
+    </div>
+    <br>
+    <button class="copy-btn" onclick="copySkills()">📋 Copy Skills</button>
+
+    <h3>📃 Extracted Resume Text:</h3>
+    <pre>{{ resume_text }}</pre>
+
+    <a href="{{ url_for('download_report', filename=filename) }}" class="button">📥 Download ATS Report (PDF)</a>
+    <br>
+    <a href="/" class="back-link">⬅ Upload Another Resume</a>
+  </div>
+
+  <script>
+    // Dark Mode
+    const toggle = document.getElementById("darkModeToggle");
+    function setDarkMode(enabled) {
+      document.body.classList.toggle("dark", enabled);
+      localStorage.setItem("darkMode", enabled);
+      toggle.checked = enabled;
+    }
+    toggle.addEventListener("change", () => {
+      setDarkMode(toggle.checked);
+    });
+    setDarkMode(localStorage.getItem("darkMode") === "true");
+
+    // Copy Skills
+    function copySkills() {
+      const pills = document.querySelectorAll("#skillsText .pill");
+      const skillText = Array.from(pills).map(p => p.textContent).join(", ");
+      navigator.clipboard.writeText(skillText)
+        .then(() => alert("✅ Skills copied to clipboard!"))
+        .catch(() => alert("❌ Copy failed."));
+    }
+  </script>
+</body>
+</html>

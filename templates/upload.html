@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume ATS Scanner - Upload</title>
+<div style="text-align: center; margin-bottom: 20px;">
+    <a href="/dashboard" target="_blank" style="text-decoration: none; font-weight: bold; color: var(--accent); font-size: 16px;">
+        📊 View ATS Dashboard
+    </a>
+</div>
+    <style>
+        :root {
+            --bg: #f5faff;
+            --text: #333;
+            --card-bg: #ffffff;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --border: #ccc;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark {
+            --bg: #121212;
+            --text: #f0f0f0;
+            --card-bg: #1f1f1f;
+            --accent: #4aa3ff;
+            --accent-hover: #2d7fc3;
+            --border: #444;
+            --shadow: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 40px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 16px var(--shadow);
+        }
+
+        .drop-area {
+            border: 2px dashed var(--accent);
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background-color: rgba(0,0,0,0.02);
+            transition: background 0.3s ease;
+            cursor: pointer;
+        }
+
+        .drop-area.dragover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .drop-area input {
+            display: none;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--card-bg);
+            color: var(--text);
+            resize: none;
+            min-height: 100px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        #charCount {
+            float: right;
+            margin-top: 4px;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .dark-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 14px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0;
+            right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body>
+    <div class="dark-toggle">
+        <label>🌙 Dark Mode
+            <label class="switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="slider"></span>
+            </label>
+        </label>
+    </div>
+
+    <h1>📄 Resume ATS Scanner</h1>
+    <div class="container">
+        <form method="POST" action="/" enctype="multipart/form-data">
+            <!-- Resume Upload -->
+            <label for="resume">Upload Your Resume:</label>
+            <div class="drop-area" id="dropArea">
+		<p id="fileNameDisplay" style="font-size:14px; color: var(--text); margin-top: 8px;"></p>
+                <p>📂 Drag & drop your resume here or <label for="resume" style="color:var(--accent); cursor:pointer;">Browse</label></p>
+                <input type="file" name="resume" id="resume" required>
+            </div>
+
+            <!-- Job Description -->
+            <label for="job_description">Paste Job Description:</label>
+            <textarea name="job_description" id="job_description" placeholder="Paste job description here..." required></textarea>
+            <small id="charCount">0 characters</small>
+
+            <!-- Submit -->
+            <button type="submit" title="Upload your resume and analyze it for skill & experience match!">🚀 Upload and Analyze</button>
+        </form>
+    </div>
+
+    <script>
+    const textarea = document.getElementById("job_description");
+    const counter = document.getElementById("charCount");
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('resume');
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    const darkToggle = document.getElementById("darkModeToggle");
+
+    // Auto expand textarea + character count
+    textarea.addEventListener("input", () => {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
+        counter.innerText = `${textarea.value.length} characters`;
+    });
+
+    // Drag & Drop Events
+    ["dragenter", "dragover"].forEach(eventName => {
+        dropArea.addEventListener(eventName, e => {
+            e.preventDefault();
+            dropArea.classList.add("dragover");
+        });
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+        dropArea.addEventListener(eventName, e => {
+            e.preventDefault();
+            dropArea.classList.remove("dragover");
+        });
+    });
+
+    // Drag & drop file assignment
+    dropArea.addEventListener("drop", e => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            fileNameDisplay.textContent = `📄 Selected: ${files[0].name}`;
+        }
+    });
+
+    // Browse selection
+    fileInput.addEventListener("change", () => {
+        if (fileInput.files.length > 0) {
+            fileNameDisplay.textContent = `📄 Selected: ${fileInput.files[0].name}`;
+        }
+    });
+
+    // Dark mode toggle
+    function setDarkMode(enabled) {
+        document.body.classList.toggle("dark", enabled);
+        localStorage.setItem("darkMode", enabled);
+        darkToggle.checked = enabled;
+    }
+
+    darkToggle.addEventListener("change", () => {
+        setDarkMode(darkToggle.checked);
+    });
+
+    const savedMode = localStorage.getItem("darkMode") === "true";
+    setDarkMode(savedMode);
+    </script>
+
+</body>
+</html>

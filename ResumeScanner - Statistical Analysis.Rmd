@@ -1,0 +1,252 @@
+---
+title: "ResumeScanner"
+author: "Muhammad Sualeh Alam"
+date: "2025-04-23"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Data Cleaning 
+
+Transforming the raw "resume_data" into a cleaned data format for further analysis.
+
+```{r}
+# Read old data
+df_res <- read.csv("C:/Users/ihate/OneDrive/Documents/CSUEB Project/Resume ATS Scanner Project/resume_data.csv", stringsAsFactors = FALSE)
+
+# Remove rows with any missing values
+df_clean <- na.omit(df_res)
+
+# Drop columns
+df_clean <- df_clean[ , !(names(df_clean) %in% c("job_description"))]
+
+# Create a new column 'decision' based on 75 score threshold
+df_clean$decision <- ifelse(df_clean$score > 75, "Hired", "Rejected")
+
+#head(df_clean)
+
+# After Data cleaning
+print(dim(df_res) )
+print(dim(df_clean))
+
+```
+
+## Creating a new Cleaned Dataset  
+
+Export it into a new **cleaned_data** file  
+
+```{r}
+# Code is currently commented out otherwise each time its run it creates a new file.
+#write.csv(df_clean, "cleaned_data.csv", row.names = FALSE)
+```
+
+# Model Building for MLR
+
+```{r}
+df_resume <- read.csv("C:/Users/ihate/Downloads/f24/data/cleaned_data.csv") # make sure this is in the wd
+
+# Using One-hot Encoding to convert categorical into numbers
+df_resume$fexperience_level <- as.integer(factor(df_resume$experience_level, levels = c("Junior", "Mid-Level", "Senior"))) - 1
+df_resume$fexperience_level = as.factor(df_resume$fexperience_level)
+```
+
+
+### Multiple Linear Regression
+
+```{r}
+pairs(score ~ experience_years+ skills_matched, data=df_resume)
+```
+
+```{r}
+library(car)
+# Checking VIF for base model
+vif(lm( (score) ~ (experience_years) + (skills_matched) + fexperience_level, data=df_resume))
+
+```
+
+From the VIFs value it seems there do exist multi-collinearity issue between 2 columns (experience_years and fexperience_level) as VIF > 10. So, for now we will not remove these columns because they are essential for our analysis, instead we will check Multi-collinearity at the end after complete transformation and on our final model.
+
+This is a classic **model-building dilemma**, and it’s all about balancing predictive power and model stability.
+
+```{r}
+base_model = lm( (score) ~ (experience_years) + (skills_matched) + fexperience_level, data=df_resume)
+summary(base_model)
+```
+**Conclusion**:  
+All our predictors are highly significant at the $\alpha=0.05$ significance level, so we will keep all of them in our model.
+
+Our base model for Multiple Linear Regression gives us an:  
+$R^2_{adj} = 33.63$%.  
+$R^2=35.98$%
+
+
+We will now check assumptions to see whether they are violated or not or we need to transform
+
+```{r}
+plot(base_model)
+
+shapiro.test(resid(base_model))
+```
+
+**Observations**:   
+From the plots, we can see that constant variance assumption seems satisfied as we can see a random scatter of points. Furthermore, the QQPlot also shows most of the points on the line but there are visible deviations seen at both ends.
+
+**Comment on Normality Assumption**:  
+For further confirmation we use Shapiro-Wilk test for normality to confirm our assumption of normality is met or not. From the results, we can see that **p-value = 0.001873** is lesser than our $\alpha \ (significance \ level)$ which means normality assumption is violated.
+
+
+Now we will try to transform using BoxCox Transformation to stabilize Normality.
+
+```{r}
+library(MASS)
+
+boxcox(base_model, lambda=seq(0.5, 3.8, by=0.5))
+summary(powerTransform(base_model))
+```
+
+**Results:**   
+From the BoxCox transformation, it is suggested to use lambda=2, technically Square transformation on the Score variable.
+
+### Using BoxCox Transformation
+
+```{r}
+base_modelTransform = lm( (score)^2 ~ (experience_years) + (skills_matched) + fexperience_level, data=df_resume)
+summary(base_modelTransform)
+```
+**Conclusion**:   
+After applying the BoxCox Transformation, not much improvement in the $R^2_{adj}$. After being transformed $R^2_{adj}$= 33.72% from the base model $R^2_{adj}$ = 33.63%. This is a very slight improvement in the model after transformation.
+
+
+We will check the assumptions once again after Square transformation
+
+```{r}
+plot(base_modelTransform)
+shapiro.test(resid(base_modelTransform))
+cat("AIC Value of Transformed Model = ", AIC(base_modelTransform))
+
+```
+
+**Comment on assumptions:**  
+Even after using square transformation the Normality assumption is still not being satisfied. The QQPlot still shows major signs of deviation at tails. Furthermore, the Residual vs Fitted plot also shows problems of constant variance now as we can observe some signs of Fanning Pattern from the plot.
+
+Furthermore, the AIC value of the transformed model also shows a very high-value.
+
+
+## Model Optimization on my own :)
+
+We will try some more transformations to improve the $R^2_{adj}$
+
+```{r}
+# Using log1p because skills_matched has a 0 value so this will handle this.
+lm3 <- lm( log(score) ~ log(experience_years) + log1p(skills_matched) + fexperience_level, data=df_resume)
+summary(lm3)
+
+cat("Final Model AIC Value= ", AIC(lm3))
+```
+**Why This Is Statistically Justified:**   
+In practice, **model performance > strict adherence to Box-Cox lambda**, especially if your goal is prediction.
+
+**Statistical Dilligence:**  
+Box-Cox suggested a λ = 2, but empirical performance supports the log model.
+
+Final Model:  
+$log(\hat {Score}) = log(ExperienceYears) + log(Skillsmatched) + Fexperiencelevel1 + Fexperiencelevel1$
+
+Estimated Regression Model:  
+$log(\hat {Score}) = 3.682 + 0.212log(ExperienceYears) + 0.252log(Skillsmatched) -0.228 Fexperiencelevel1 -0.618Fexperiencelevel2$
+
+**$R^2$= 46.5%**  
+**$R^2_{adj}$ =44.58%**  (Significant improvement in the model)  
+**AIC Value of Final Model= -152.3**  (The lower the AIC the better the model performance)   
+
+#### $R^2_{adj}$ =44.58% not amazing, but very reasonable for human behavioral modeling (resume scores are subjective!)
+
+**Interpretation of $R^2_{adj}$**:  
+
+An R-squared of 0.4458 (or 44.58%) means that ~ 44% of the variation in the outcome variable can be attributed to the model's predictor(s). The remaining is attributed to other factors not included in the model or random variation. 
+
+In real-world scenarios, especially with human-centric data like resume screening, 36% isn’t bad.
+
+
+Checking assumptions again for this final model after log transformation.
+
+```{r}
+plot(lm3)
+
+shapiro.test(resid(lm3))
+
+# Checking VIF value for the transformed model
+vif(lm3)
+```
+**Comment on assumptions:**   
+Even after using log transformation the Normality assumption is still not satisfied. The QQPlot still shows some signs of deviation at tails. However, the Residual vs Fitted plot shows a random scatter of points and no fanning pattern is observed therefore, constant variance condition is satisfied in this transformation
+
+**Comment on Normality Assumption**:   
+For further confirmation we use Shapiro-Wilk test for confirming our assumption of normality. From the results, we can see that p-value is still very small than our $\alpha \ (significance \ level)$ which means normality assumption is violated.
+
+**Normality Assumption Violation Discussion** $(n1 >= 30)$   
+Yes, since we have 158 a decent-sized sample, we are in the "safe zone" for applying CLT to model inference. The CLT will allow us to rely on the regression estimates (coefficients and their significance) for large samples even if the residuals are not perfectly normal.
+So, the normality of residuals isn't as critical for large samples when you're performing regression.
+
+**Comment on Multi-collinearity**:   
+Surprisingly, the multi-collinearity issue has also been fixed to a greater extent after the log transformation.
+
+### Final Comments on FINAL MODEL  
+
+It is far superior both in Adjusted R² and AIC, which suggests:  
+1. Better model fit    
+2. Better generalization    
+3. More appropriate transformation for your data    
+
+
+# Logistic Regression WORKS
+
+```{r}
+df_resume$fdecision <- as.integer(factor(df_resume$decision, levels = c("Rejected", "Hired"))) - 1
+
+glm3 <- glm(fdecision ~ (experience_years) + (skills_matched) + fexperience_level, data=df_resume, family=binomial)
+
+summary(glm3)
+```
+
+```{r}
+predicted_probs <- predict(glm3, type = "response")
+
+predicted_classes <- ifelse(predicted_probs > 0.5, 1, 0)
+table(Predicted = predicted_classes, Actual = df_resume$fdecision)
+
+# Accuracy 
+mean(predicted_classes == df_resume$fdecision)
+
+
+library(pROC)
+roc_obj <- roc(df_resume$fdecision, predicted_probs)
+auc(roc_obj)
+plot(roc_obj)
+```
+
+##  Interpretation:  
+Overall Accuracy (70.2%): Decent — the model is correct ~70% of the time.
+
+Sensitivity (45.5%): This is low — it’s only correctly identifying 45.5% of the actual 1s (positives). So if predicting “yes” is crucial, this may be a problem.
+
+Specificity (85.7%): Pretty good — it's doing well at predicting 0s.
+
+AUC (0.7937): This is actually quite good.
+
+AUC > 0.7 = decent
+
+AUC > 0.8 = strong
+
+So 0.79 is close to very good territory.
+
+## Final Thoughts and Recommendations
+
+**Feature Engineering:** Since resume data can be sparse, more sophisticated feature engineering might help improve performance. Consider extracting more meaningful features from the text (e.g. sentiment analysis) or exploring the potential impact of other factors such as education level or job title.
+
+**Model Comparison:** While the linear models and logistic regression perform well, it might be worth comparing the results with machine learning models like Decision Trees, Random Forests, or Gradient Boosting (e.g., XGBoost) to see if they offer a significant improvement in predictive accuracy, especially for complex datasets like resumes.
+
+
